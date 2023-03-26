@@ -1,38 +1,25 @@
-from collections import namedtuple
-import altair as alt
-import math
-import pandas as pd
 import streamlit as st
+import pandas as pd
+import requests
 
-"""
-# Welcome to Streamlit!
+# Define the API endpoints for Binance
+BNB_URL = "https://api.binance.com/api/v3/klines?symbol=BNBUSDT&interval=15m&limit=50"
+BTC_URL = "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=15m&limit=50"
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:
+# Fetch data from the API
+def get_data(url):
+    data = requests.get(url).json()
+    df = pd.DataFrame(data)
+    df.columns = ['open_time', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume',
+                  'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore']
+    df['open_time'] = pd.to_datetime(df['open_time'], unit='ms')
+    df['close_time'] = pd.to_datetime(df['close_time'], unit='ms')
+    return df
 
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+# Get Binance data
+bnb_df = get_data(BNB_URL)
+btc_df = get_data(BTC_URL)
 
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
-
-
-with st.echo(code_location='below'):
-    total_points = st.slider("Number of points in spiral", 1, 5000, 2000)
-    num_turns = st.slider("Number of turns in spiral", 1, 100, 9)
-
-    Point = namedtuple('Point', 'x y')
-    data = []
-
-    points_per_turn = total_points / num_turns
-
-    for curr_point_num in range(total_points):
-        curr_turn, i = divmod(curr_point_num, points_per_turn)
-        angle = (curr_turn + 1) * 2 * math.pi * i / points_per_turn
-        radius = curr_point_num / total_points
-        x = radius * math.cos(angle)
-        y = radius * math.sin(angle)
-        data.append(Point(x, y))
-
-    st.altair_chart(alt.Chart(pd.DataFrame(data), height=500, width=500)
-        .mark_circle(color='#0068c9', opacity=0.5)
-        .encode(x='x:Q', y='y:Q'))
+# Plot the data
+st.line_chart(bnb_df[['open_time', 'close']].set_index('open_time'))
+st.line_chart(btc_df[['open_time', 'close']].set_index('open_time'))
